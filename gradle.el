@@ -54,10 +54,10 @@ single lambda argument, change current directory to the project's
 root directory, and execute the argument."
   :tag "Gradle Execute in Project Root Function"
   :type '(choice (function-item :tag "Use current directory" gradle--with-current-directory)
-         (function-item :tag "Use eclim" gradle--with-eclim-project-root)
-         (function-item :tag "Use project-root" gradle--with-project-root-project-root)
-         (function-item :tag "Use eproject" gradle--with-eproject-project-root)
-         (function-item :tag "Custom function"))
+                 (function-item :tag "Use eclim" gradle--with-eclim-project-root)
+                 (function-item :tag "Use project-root" gradle--with-project-root-project-root)
+                 (function-item :tag "Use eproject" gradle--with-eproject-project-root)
+                 (function-item :tag "Custom function"))
   :group 'gradle)
 
 (defvar gradle-tasks-for-path nil
@@ -109,23 +109,23 @@ list is a task group descriptor, and each descriptor is list
 where the first element is the group header, and the second
 element is a string describing the tasks."
   (mapcar '(lambda (str)
-         (let ((split-str (split-string str "\n-+\n")))
-           (when (= 2 (length split-str))
-         split-str)))
-      (split-string tasks-output "\n\n")))
+             (let ((split-str (split-string str "\n-+\n")))
+               (when (= 2 (length split-str))
+                 split-str)))
+	  (split-string tasks-output "\n\n")))
 
 (defun gradle--parse-tasks (tasks-output)
   "Parse the output from 'gradle tasks', and generate a list of tasks."
   (let ((tasks))
     (mapc '(lambda (desc)
-         (when (and desc
-            (cdr desc)
-            (string-match "\\([[:alpha:][:space:]]+\\) tasks" (car desc)))
-           (mapcar '(lambda (line)
-              (when (string-match "^[^[:space:]]" line)
-                (add-to-list 'tasks (car (split-string line " - ")))))
-               (split-string (cadr desc) "\n+"))))
-      (gradle--split-tasks-with-headings tasks-output))
+             (when (and desc
+                        (cdr desc)
+                        (string-match "\\([[:alpha:][:space:]]+\\) tasks" (car desc)))
+               (mapcar '(lambda (line)
+                          (when (string-match "^[^[:space:]]" line)
+                            (add-to-list 'tasks (car (split-string line " - ")))))
+                       (split-string (cadr desc) "\n+"))))
+          (gradle--split-tasks-with-headings tasks-output))
     tasks))
 
 (defun gradle--cache-task-list (root)
@@ -133,9 +133,9 @@ element is a string describing the tasks."
 This function stores the list of tasks associated with the
 specified directory, ROOT."
   (let* ((default-directory root)
-     (output (shell-command-to-string "gradle --no-color tasks --all"))
-     (tasks (gradle--parse-tasks output))
-     (old-cache (assoc root gradle-tasks-for-path)))
+         (output (shell-command-to-string "gradle --no-color tasks --all"))
+         (tasks (gradle--parse-tasks output))
+         (old-cache (assoc root gradle-tasks-for-path)))
     (when old-cache
       (delq old-cache gradle-tasks-for-path))
     (add-to-list 'gradle-tasks-for-path (cons root tasks))
@@ -148,8 +148,8 @@ The project root discovery is controlled by the custom variable
   (gradle--with-project-root
    (let* ((task-list (assoc default-directory gradle-tasks-for-path)))
      (if (and gradle-auto-discover-tasks
-          (null task-list))
-     (gradle--cache-task-list default-directory)
+              (null task-list))
+         (gradle--cache-task-list default-directory)
        (cdr task-list)))))
 
 (defun gradle-discover-tasks ()
@@ -164,16 +164,16 @@ project root discovery is controlled by the custom variable
 
 (defun gradle--input-commandline ()
   (let ((crm-separator " ")
-    (crm-local-completion-map (copy-keymap crm-local-completion-map)))
+        (crm-local-completion-map (copy-keymap crm-local-completion-map)))
     (define-key crm-local-completion-map " " 'self-insert-command)
     (completing-read-multiple "gradle " (gradle--get-task-list)
-                  nil nil nil gradle-run-history)))
+                              nil nil nil gradle-run-history)))
 
 (defun gradle-run (tasks)
   (interactive (list (gradle--input-commandline)))
   (gradle--with-project-root
    (compile (concat (gradle--executable-path)
-            (when tasks
-              (mapconcat 'identity (cons "" tasks) " "))))))
+                    (when tasks
+                      (mapconcat 'identity (cons "" tasks) " "))))))
 
 (provide 'gradle)

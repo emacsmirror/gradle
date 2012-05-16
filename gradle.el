@@ -52,6 +52,7 @@ first time for each directory it is executed in."
  For custom functions, the specified function should accept a
 single lambda argument, change current directory to the project's
 root directory, and execute the argument."
+  :tag "Gradle Execute in Project Root Function"
   :type '(choice (function-item :tag "Use current directory" gradle--with-current-directory)
          (function-item :tag "Use eclim" gradle--with-eclim-project-root)
          (function-item :tag "Use project-root" gradle--with-project-root-project-root)

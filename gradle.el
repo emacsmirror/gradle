@@ -3,7 +3,7 @@
 ;; Copyright (C) 2012 Vedat Hallac
 
 ;; Authors: Vedat Hallac
-;; Version: 1.0
+;; Version: 1.0.1
 ;; Created: 2012/05/11
 ;; Keywords: gradle
 
@@ -26,6 +26,7 @@
 
 (require 'compile)
 (require 'crm)
+(require 'cl)
 
 (defgroup gradle nil
   "gradle customizations"
@@ -70,6 +71,11 @@ path and the cdr is the list of tasks.")
 
 (defvar gradle-run-history nil
   "The history list for gradle-run inputs")
+
+(defconst gradle-task-indent-amount 4
+  "The number of spaces used to indent dependent tasks.
+This value may need modification only if the output of 'gradle
+tasks' command changes in a future release.")
 
 (defmacro gradle--with-project-root (&rest body)
   "Execute BODY with current directory set to project root.
@@ -143,19 +149,41 @@ element is a string describing the tasks."
                  split-str)))
 	  (split-string tasks-output "\n\n")))
 
+(defun gradle--get-tasks (tasks-output-lines)
+  "Extract a list of tasks from a partial output line list."
+  (let ((prev-have-desc nil)
+        (prev-indent 0))
+    (delq nil
+          (mapcar
+           '(lambda (line)
+              ;; This is disgusting, really. The whole parsing is made quite
+              ;; complicated due to two tings: descriptions can have multiple
+              ;; lines with random number of spaces before first word, and
+              ;; dependent tasks can be indented.
+              ;; What we do here is try to figure out which lines are continuing
+              ;; descriptions, and which lines are task specifiers.
+              (let ((cur-indent (if (string-match "^[[:space:]]+" line)
+                                    (match-end 0)
+                                  0))
+                    (have-desc (string-match "^[[:space:]]*[^[:space:]]+ - " line)))
+                (when (or (not prev-have-desc)
+                          (and (<= cur-indent (+ prev-indent
+                                                 gradle-task-indent-amount))
+                               (= 0 (mod cur-indent gradle-task-indent-amount))))
+                  (setq prev-have-desc have-desc)
+                  (setq prev-indent cur-indent)
+                  (when (string-match "^[[:space:]]*\\([^[:space:]]+\\)" line)
+                    (match-string 1 line)))))
+           tasks-output-lines))))
+
 (defun gradle--parse-tasks (tasks-output)
   "Parse the output from 'gradle tasks', and generate a list of tasks."
-  (let ((tasks))
-    (mapc '(lambda (desc)
+  (mapcan '(lambda (desc)
              (when (and desc
                         (cdr desc)
                         (string-match "\\([[:alpha:][:space:]]+\\) tasks" (car desc)))
-               (mapcar '(lambda (line)
-                          (when (string-match "^[^[:space:]]" line)
-                            (add-to-list 'tasks (car (split-string line " - ")))))
-                       (split-string (cadr desc) "\n+"))))
-          (gradle--split-tasks-with-headings tasks-output))
-    tasks))
+               (gradle--get-tasks (split-string (cadr desc) "\n+"))))
+          (gradle--split-tasks-with-headings tasks-output)))
 
 (defun gradle--cache-task-list (root)
   "Run gradle, get a list of tasks, parse the output, and cache the result.

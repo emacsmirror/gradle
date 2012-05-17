@@ -134,7 +134,7 @@ This function stores the list of tasks associated with the
 specified directory, ROOT."
   (let* ((default-directory root)
          (output (shell-command-to-string
-                  (concat (gradle--executable-path) " --no-color tasks --all")))
+                  (concat (gradle--executable-path) " -q --no-color tasks --all")))
          (tasks (gradle--parse-tasks output))
          (old-cache (assoc root gradle-tasks-for-path)))
     (when old-cache

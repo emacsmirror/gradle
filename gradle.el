@@ -60,6 +60,9 @@ root directory, and execute the argument."
                  (function-item :tag "Custom function"))
   :group 'gradle)
 
+(defvar gradle-options nil
+  "The cache of gradle command line options.")
+
 (defvar gradle-tasks-for-path nil
   "The cache of gradle task lists for each project root.
 The elements of this list are cons pairs where the car is the
@@ -101,6 +104,32 @@ The project root is determined according to
 
 (defun gradle--executable-path ()
   (executable-find gradle-executable))
+
+(defun gradle--parse-options (help-output)
+  "Parse the output from 'gradle --help', and generate a list of options."
+  (mapcan '(lambda (line)
+             (let ((start 0))
+               (loop while (string-match "\\(--[^,[:space:]]+\\)" line start)
+                     do (setq start (match-end 0))
+                     collecting (match-string 1 line))))
+          (split-string output "\n+")))
+
+(defun gradle--cache-options ()
+  "Run \"gradle --help\", parse the output, and cache the result.
+This function stores the list of command line options in
+`gradle-options' variable only once. Since gradle command line
+options are independent of the build file, there is no way to
+reconstruct the cache."
+  (when (null gradle-options)
+    (let* ((output (shell-command-to-string
+                    (concat (gradle--executable-path) " --help"))))
+      (setq gradle-options (gradle--parse-options output)))))
+
+(defun gradle--get-options ()
+  "Return a list of gradle command line options."
+  (unless gradle-options
+    (gradle--cache-options))
+  gradle-options)
 
 (defun gradle--split-tasks-with-headings (tasks-output)
   "Parse the output from 'gradle tasks', and split the result into a more suitable form.
@@ -169,7 +198,9 @@ project root discovery is controlled by the custom variable
   (let ((crm-separator " ")
         (crm-local-completion-map (copy-keymap crm-local-completion-map)))
     (define-key crm-local-completion-map " " 'self-insert-command)
-    (completing-read-multiple "gradle " (gradle--get-task-list)
+    (completing-read-multiple "gradle "
+                              (append (gradle--get-options)
+                                      (gradle--get-task-list))
                               nil nil nil gradle-run-history)))
 
 (defun gradle-run (tasks)

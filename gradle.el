@@ -132,6 +132,7 @@ element is a string describing the tasks."
   "Run gradle, get a list of tasks, parse the output, and cache the result.
 This function stores the list of tasks associated with the
 specified directory, ROOT."
+  (message "Running gradle. Please wait...")
   (let* ((default-directory root)
          (output (shell-command-to-string
                   (concat (gradle--executable-path) " -q --no-color tasks --all")))
@@ -140,6 +141,7 @@ specified directory, ROOT."
     (when old-cache
       (delq old-cache gradle-tasks-for-path))
     (add-to-list 'gradle-tasks-for-path (cons root tasks))
+    (message "Done")
     tasks))
 
 (defun gradle--get-task-list ()

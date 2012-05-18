@@ -3,7 +3,7 @@
 ;; Copyright (C) 2012 Vedat Hallac
 
 ;; Authors: Vedat Hallac
-;; Version: 1.0.1
+;; Version: 1.0.2
 ;; Created: 2012/05/11
 ;; Keywords: gradle
 

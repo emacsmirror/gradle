@@ -147,7 +147,7 @@ element is a string describing the tasks."
              (let ((split-str (split-string str "\n-+\n")))
                (when (= 2 (length split-str))
                  split-str)))
-	  (split-string tasks-output "\n\n")))
+          (split-string tasks-output "\n\n")))
 
 (defun gradle--get-tasks (tasks-output-lines)
   "Extract a list of tasks from a partial output line list."
@@ -190,16 +190,27 @@ element is a string describing the tasks."
 This function stores the list of tasks associated with the
 specified directory, ROOT."
   (message "Running gradle. Please wait...")
+  ;; I need to run 'gradle tasks' twice in the code below. For
+  ;; multi-project setups the output of 'gradle tasks --all' does not
+  ;; contain ouput of 'gradle tasks', so I need to execute both to get
+  ;; the full list.
+  ;;
+  ;; I may need to revisit this code to eliminate one of the
+  ;; executions for single project setups, but the extra wait should
+  ;; be OK for now.
   (let* ((default-directory root)
-         (output (shell-command-to-string
-                  (concat (gradle--executable-path) " -q --no-color tasks --all")))
+         (gradle-cmdline (concat (gradle--executable-path) " -q --no-color tasks"))
+         (output (shell-command-to-string gradle-cmdline))
          (tasks (gradle--parse-tasks output))
+         (output-all (shell-command-to-string (concat gradle-cmdline " --all")))
+         (tasks-all (gradle--parse-tasks output-all))
+         (combined-tasks (delete-dups (append tasks tasks-all)))
          (old-cache (assoc root gradle-tasks-for-path)))
     (when old-cache
       (delq old-cache gradle-tasks-for-path))
-    (add-to-list 'gradle-tasks-for-path (cons root tasks))
+    (add-to-list 'gradle-tasks-for-path (cons root combined-tasks))
     (message "Done")
-    tasks))
+    combined-tasks))
 
 (defun gradle--get-task-list ()
   "Return the task list associated with the project root.

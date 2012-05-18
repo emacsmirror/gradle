@@ -101,7 +101,7 @@ The project root is determined according to
   (with-project-root
    (funcall func)))
 
-(defun gradle--with-eclim-project-root (func)
+(defun gradle--with-eproject-root (func)
   "Execute `func' inside eclim's project root"
   (eval-when-compile
     (require 'eproject))

@@ -118,7 +118,7 @@ The project root is determined according to
                (loop while (string-match "\\(--[^,[:space:]]+\\)" line start)
                      do (setq start (match-end 0))
                      collecting (match-string 1 line))))
-          (split-string output "\n+")))
+          (split-string help-output "\n+")))
 
 (defun gradle--cache-options ()
   "Run \"gradle --help\", parse the output, and cache the result.

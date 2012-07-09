@@ -81,7 +81,7 @@ tasks' command changes in a future release.")
   "Execute BODY with current directory set to project root.
 The project root is determined according to
 `gradle-with-project-root-func' custom variable."
-  `(,gradle-with-project-root-func
+  `(funcall gradle-with-project-root-func
     '(lambda () ,@body)))
 
 (defun gradle--with-current-directory (func)
@@ -89,24 +89,24 @@ The project root is determined according to
 
 (defun gradle--with-eclim-project-root (func)
   "Execute `func' inside eclim's project root"
-  (eval-when-compile
-    (require 'eclim))
-  (let ((default-directory (eclim--project-dir)))
-    (funcall func)))
+  (if (not (require 'eclim nil t))
+      (gradle--with-current-directory func)
+    (let ((default-directory (eclim--project-dir)))
+      (funcall func))))
 
 (defun gradle--with-project-root-project-root (func)
   "Execute `func' inside eclim's project root"
-  (eval-when-compile
-    (require 'project-root))
-  (with-project-root
-   (funcall func)))
+  (if (not (require 'project-root nil t))
+      (gradle--with-current-directory func)
+    (with-project-root
+     (funcall func))))
 
 (defun gradle--with-eproject-root (func)
   "Execute `func' inside eclim's project root"
-  (eval-when-compile
-    (require 'eproject))
-  (let ((default-directory (eproject-root)))
-    (funcall func)))
+  (if (not (require 'eproject nil t))
+      (gradle--with-current-directory func)
+    (let ((default-directory (eproject-root)))
+      (funcall func))))
 
 (defun gradle--executable-path ()
   (executable-find gradle-executable))
@@ -143,10 +143,10 @@ The output will be a list of lists, where each element of the
 list is a task group descriptor, and each descriptor is list
 where the first element is the group header, and the second
 element is a string describing the tasks."
-  (mapcar '(lambda (str)
-             (let ((split-str (split-string str "\n-+\n")))
-               (when (= 2 (length split-str))
-                 split-str)))
+  (mapcar #'(lambda (str)
+              (let ((split-str (split-string str "\n-+\n")))
+                (when (= 2 (length split-str))
+                  split-str)))
           (split-string tasks-output "\n\n")))
 
 (defun gradle--get-tasks (tasks-output-lines)
@@ -155,25 +155,25 @@ element is a string describing the tasks."
         (prev-indent 0))
     (delq nil
           (mapcar
-           '(lambda (line)
-              ;; This is disgusting, really. The whole parsing is made quite
-              ;; complicated due to two tings: descriptions can have multiple
-              ;; lines with random number of spaces before first word, and
-              ;; dependent tasks can be indented.
-              ;; What we do here is try to figure out which lines are continuing
-              ;; descriptions, and which lines are task specifiers.
-              (let ((cur-indent (if (string-match "^[[:space:]]+" line)
-                                    (match-end 0)
-                                  0))
-                    (have-desc (string-match "^[[:space:]]*[^[:space:]]+ - " line)))
-                (when (or (not prev-have-desc)
-                          (and (<= cur-indent (+ prev-indent
-                                                 gradle-task-indent-amount))
-                               (= 0 (mod cur-indent gradle-task-indent-amount))))
-                  (setq prev-have-desc have-desc)
-                  (setq prev-indent cur-indent)
-                  (when (string-match "^[[:space:]]*\\([^[:space:]]+\\)" line)
-                    (match-string 1 line)))))
+           #'(lambda (line)
+               ;; This is disgusting, really. The whole parsing is made quite
+               ;; complicated due to two tings: descriptions can have multiple
+               ;; lines with random number of spaces before first word, and
+               ;; dependent tasks can be indented.
+               ;; What we do here is try to figure out which lines are continuing
+               ;; descriptions, and which lines are task specifiers.
+               (let ((cur-indent (if (string-match "^[[:space:]]+" line)
+                                     (match-end 0)
+                                   0))
+                     (have-desc (string-match "^[[:space:]]*[^[:space:]]+ - " line)))
+                 (when (or (not prev-have-desc)
+                           (and (<= cur-indent (+ prev-indent
+                                                  gradle-task-indent-amount))
+                                (= 0 (mod cur-indent gradle-task-indent-amount))))
+                   (setq prev-have-desc have-desc)
+                   (setq prev-indent cur-indent)
+                   (when (string-match "^[[:space:]]*\\([^[:space:]]+\\)" line)
+                     (match-string 1 line)))))
            tasks-output-lines))))
 
 (defun gradle--parse-tasks (tasks-output)

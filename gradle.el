@@ -61,6 +61,21 @@ root directory, and execute the argument."
                  (function-item :tag "Custom function"))
   :group 'gradle)
 
+
+(defcustom gradle-history-file-location "~/"
+  "The base directory for the gradle run history file - ending with a path seperator."
+  :type 'string
+  :group 'gradle)
+
+(defcustom gradle-history-file ".gradle-history.el"
+  "The filename of the gradle run history file"
+  :type 'string
+  :group 'gradle)
+
+(defvar gradle-history-file-complete (concat gradle-history-file-location gradle-history-file)
+"The full location of the history file"
+  )
+
 (defvar gradle-options nil
   "The cache of gradle command line options.")
 
@@ -238,15 +253,59 @@ project root discovery is controlled by the custom variable
         (crm-local-completion-map (copy-keymap crm-local-completion-map)))
     (define-key crm-local-completion-map " " 'self-insert-command)
     (completing-read-multiple "gradle "
-                              (append (gradle--get-options)
-                                      (gradle--get-task-list))
-                              nil nil nil gradle-run-history)))
+                              (append 
+			       gradle-run-history
+			       (gradle--get-options)
+			       (gradle--get-task-list))
+			      )
+    )
+)
 
 (defun gradle-run (tasks)
   (interactive (list (gradle--input-commandline)))
   (gradle--with-project-root
    (compile (concat (gradle--executable-path)
                     (when tasks
-                      (mapconcat 'identity (cons "" tasks) " "))))))
+                      (mapconcat 'identity (cons "" tasks) " ")))))
+  (add-to-list 'gradle-run-history (when tasks
+                      (mapconcat 'identity (cons "" tasks) " ")))
+  (gradle--add-history gradle-run-history)
+)
+
+
+
+
+
+(defun gradle--add-history (gradle-run-command-line)
+"Saves the commandline history to a file for use between sessions"
+(if (eq nil (get-buffer gradle-history-file))
+    (find-file gradle-history-file)
+  )
+(with-current-buffer gradle-history-file
+    (erase-buffer)
+    (goto-char (point-min))
+    (insert (mapconcat 'identity (delete-dups (mapcar 'chomp gradle-run-command-line)) "\n"))
+    (save-buffer)
+    )
+)
+
+(defun chomp (str)
+      "Chomp leading and tailing whitespace from STR."
+      (while (string-match "\\`\n+\\|^\\s-+\\|\\s-+$\\|\n+\\'"
+                           str)
+        (setq str (replace-match "" t t str)))
+      str)
+
+(defun gradle--load-history()
+  "Loads the gradle history file"
+  (if (eq nil (get-buffer gradle-history-file))
+      (find-file gradle-history-file)
+    )
+  (with-current-buffer gradle-history-file
+    (setq gradle-run-history (split-string (buffer-string) "\n"))
+    )
+  )
+
+(gradle--load-history)
 
 (provide 'gradle)

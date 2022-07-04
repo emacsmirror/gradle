@@ -74,8 +74,3 @@ names here if they are cached.
 
 If you want to update the task name cache, you need to execute
 `gradle-discover-tasks`.
-
-## Contributing
-
-Feel free to fork [the project on github](https://github.com/vhallac/gradle-el),
-make modifications or bugfixes, and issue a pull request.
